@@ -1,0 +1,42 @@
+name: Update Meta product feed
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: shiftdose-meta-feed
+  cancel-in-progress: true
+
+jobs:
+  update-feed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate feed from WooCommerce
+        run: python generate_feed.py
+
+      - name: Commit feed if changed
+        shell: bash
+        run: |
+          if git diff --quiet -- feed.csv; then
+            echo "Feed is already up to date."
+            exit 0
+          fi
+          git config user.name "SHIFT DOSE Feed Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add feed.csv
+          git commit -m "chore: refresh Meta product feed"
+          git push
